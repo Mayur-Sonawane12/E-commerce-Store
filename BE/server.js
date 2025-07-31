@@ -13,7 +13,7 @@ import cartRoutes from './routes/cartRoutes.js';
 dotenv.config();
 const app = express();
 app.use(cors({ 
-    origin: ['http://localhost:5173', 'https://e-commerce-store-website1.netlify.app'] 
+    origin: ['http://localhost:5173', 'https://e-commerce-store-website1.netlify.app', 'https://mayur-sonawane12.github.io/E-commerce-Store'] 
 }));
 app.use(express.json());
 
