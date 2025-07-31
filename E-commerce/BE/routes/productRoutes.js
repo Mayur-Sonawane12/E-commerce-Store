@@ -45,17 +45,24 @@ router.delete('/deleteproduct/:id', auth, async (req, res) => {
 });
 
 // Get all products with search, filter, pagination
-router.get('/getproducts', async (req, res) => {
+router.get('/getall', async (req, res) => {
   try {
     const { search, category, page = 1, limit = 10 } = req.query;
     const query = {};
     if (search) query.title = { $regex: search, $options: 'i' };
     if (category) query.category = category;
-    const products = await Product.find(query)
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
-    const count = await Product.countDocuments(query);
-    res.json({ products, total: count });
+    
+    // If limit is 0, return all products without pagination
+    if (limit === '0' || limit === 0) {
+      const products = await Product.find(query);
+      res.json({ products, total: products.length });
+    } else {
+      const products = await Product.find(query)
+        .skip((page - 1) * limit)
+        .limit(Number(limit));
+      const count = await Product.countDocuments(query);
+      res.json({ products, total: count });
+    }
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

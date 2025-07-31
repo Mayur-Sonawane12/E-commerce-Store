@@ -260,21 +260,21 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  // const clearCart = async () => {
-  //   try {
-  //     if (isAuthenticated) {
-  //       await axios.delete('http://localhost:5000/api/cart/deletecart', {
-  //         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-  //       });
-  //       setCart([]);
-  //     } else {
-  //       setCart([]);
-  //       localStorage.removeItem('cart');
-  //     }
-  //   } catch (error) {
-  //     console.error('Error clearing cart:', error);
-  //   }
-  // };
+  const clearCart = async () => {
+    try {
+      if (isAuthenticated) {
+        await axios.delete('http://localhost:5000/api/cart/deletecart', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setCart([]);
+      } else {
+        setCart([]);
+        localStorage.removeItem('cart');
+      }
+    } catch (error) {
+      console.error('Error clearing cart:', error);
+    }
+  };
 
   const getCartTotal = () => {
     return cart.reduce((total, item) => {
@@ -293,8 +293,11 @@ export const CartProvider = ({ children }) => {
     addToCart,
     updateCartItem,
     removeFromCart,
+    clearCart,
     getCartTotal,
-    getCartCount
+    getCartCount,
+    // handleProceedToCheckout,
+    // handleContinueShopping
   };
 
   return (

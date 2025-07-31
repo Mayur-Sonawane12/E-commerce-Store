@@ -9,13 +9,14 @@ const AdminOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState('');
 
   // Filter states
   const [filters, setFilters] = useState({
     status: 'all',
     paymentStatus: 'all',
     search: '',
-    dateRange: 'all'
+    dateRange: 'all'  
   });
 
   useEffect(() => {
@@ -29,18 +30,38 @@ const AdminOrders = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
+      setError('');
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setError('No authentication token found');
+        setLoading(false);
+        return;
+      }
+
       const response = await axios.get('http://localhost:5000/api/orders/getallorders', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
-      setOrders(response.data);
+      
+      // Ensure we always set an array, even if the response is not as expected
+      const ordersData = Array.isArray(response.data) ? response.data : [];
+      setOrders(ordersData);
     } catch (error) {
       console.error('Error fetching orders:', error);
+      setError(error.response?.data?.message || 'Failed to fetch orders');
+      setOrders([]);
     } finally {
       setLoading(false);
     }
   };
 
   const filterOrders = () => {
+    // Ensure orders is always an array before filtering
+    if (!Array.isArray(orders)) {
+      setFilteredOrders([]);
+      return;
+    }
+
     let filtered = [...orders];
 
     // Status filter
@@ -57,9 +78,11 @@ const AdminOrders = () => {
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
       filtered = filtered.filter(order => 
-        order._id.toLowerCase().includes(searchTerm) ||
+        order._id?.toLowerCase().includes(searchTerm) ||
         order.shippingAddress?.fullName?.toLowerCase().includes(searchTerm) ||
-        order.shippingAddress?.email?.toLowerCase().includes(searchTerm)
+        order.shippingAddress?.email?.toLowerCase().includes(searchTerm) ||
+        order.userId?.name?.toLowerCase().includes(searchTerm) ||
+        order.userId?.email?.toLowerCase().includes(searchTerm)
       );
     }
 
@@ -91,11 +114,14 @@ const AdminOrders = () => {
   const updateOrderStatus = async (orderId, orderStatus, paymentStatus) => {
     try {
       setUpdating(true);
+      setError('');
+      const token = localStorage.getItem('token');
+      
       await axios.put(
         `http://localhost:5000/api/orders/updateorder/${orderId}/status`,
         { orderStatus, paymentStatus },
         {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          headers: { Authorization: `Bearer ${token}` }
         }
       );
       
@@ -109,6 +135,7 @@ const AdminOrders = () => {
       setShowModal(false);
     } catch (error) {
       console.error('Error updating order:', error);
+      setError(error.response?.data?.message || 'Failed to update order');
     } finally {
       setUpdating(false);
     }
@@ -153,6 +180,7 @@ const AdminOrders = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -165,10 +193,21 @@ const AdminOrders = () => {
   const calculateTotalRevenue = () => {
     return filteredOrders
       .filter(order => order.paymentStatus === 'Paid')
-      .reduce((total, order) => total + order.totalAmount, 0);
+      .reduce((total, order) => total + (order.totalAmount || 0), 0);
   };
 
   const getOrderStats = () => {
+    if (!Array.isArray(filteredOrders)) {
+      return {
+        total: 0,
+        pending: 0,
+        shipped: 0,
+        delivered: 0,
+        cancelled: 0,
+        revenue: 0
+      };
+    }
+    
     const stats = {
       total: filteredOrders.length,
       pending: filteredOrders.filter(o => o.orderStatus === 'Processing').length,
@@ -207,6 +246,14 @@ const AdminOrders = () => {
           </button>
         </div>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="alert alert-danger alert-dismissible fade show" role="alert">
+          {error}
+          <button type="button" className="btn-close" onClick={() => setError('')}></button>
+        </div>
+      )}
 
       {/* Statistics Cards */}
       <div className="row mb-4">
@@ -334,30 +381,30 @@ const AdminOrders = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map((order) => (
+                {Array.isArray(filteredOrders) && filteredOrders.map((order) => (
                   <tr key={order._id}>
                     <td>
                       <strong>#{order._id.slice(-8)}</strong>
                     </td>
                     <td>
                       <div>
-                        <strong>{order.shippingAddress?.fullName}</strong>
+                        <strong>{order.shippingAddress?.fullName || order.userId?.name || 'N/A'}</strong>
                         <br />
-                        <small className="text-muted">{order.shippingAddress?.email}</small>
+                        <small className="text-muted">{order.shippingAddress?.email || order.userId?.email || 'N/A'}</small>
                       </div>
                     </td>
                     <td>{formatDate(order.createdAt)}</td>
                     <td>
-                      <strong>₹{order.totalAmount?.toFixed(2)}</strong>
+                      <strong>₹{order.totalAmount?.toFixed(2) || '0.00'}</strong>
                     </td>
                     <td>
                       <span className={getStatusBadge(order.orderStatus)}>
-                        {getStatusIcon(order.orderStatus)} {order.orderStatus}
+                        {getStatusIcon(order.orderStatus)} {order.orderStatus || 'N/A'}
                       </span>
                     </td>
                     <td>
                       <span className={getPaymentStatusBadge(order.paymentStatus)}>
-                        {order.paymentStatus}
+                        {order.paymentStatus || 'N/A'}
                       </span>
                     </td>
                     <td>
@@ -388,7 +435,7 @@ const AdminOrders = () => {
             </table>
           </div>
 
-          {filteredOrders.length === 0 && (
+          {(!Array.isArray(filteredOrders) || filteredOrders.length === 0) && (
             <div className="text-center py-4">
               <h5>No orders found</h5>
               <p className="text-muted">Try adjusting your filters</p>
@@ -414,23 +461,23 @@ const AdminOrders = () => {
                 <div className="row">
                   <div className="col-md-6">
                     <h6>Customer Information</h6>
-                    <p><strong>Name:</strong> {selectedOrder.shippingAddress?.fullName}</p>
-                    <p><strong>Email:</strong> {selectedOrder.shippingAddress?.email}</p>
-                    <p><strong>Phone:</strong> {selectedOrder.shippingAddress?.phone}</p>
+                    <p><strong>Name:</strong> {selectedOrder.shippingAddress?.fullName || selectedOrder.userId?.name || 'N/A'}</p>
+                    <p><strong>Email:</strong> {selectedOrder.shippingAddress?.email || selectedOrder.userId?.email || 'N/A'}</p>
+                    <p><strong>Phone:</strong> {selectedOrder.shippingAddress?.phone || 'N/A'}</p>
                     
                     <h6 className="mt-3">Shipping Address</h6>
-                    <p>{selectedOrder.shippingAddress?.street}</p>
-                    <p>{selectedOrder.shippingAddress?.city}, {selectedOrder.shippingAddress?.state} {selectedOrder.shippingAddress?.zipCode}</p>
-                    <p>{selectedOrder.shippingAddress?.country}</p>
+                    <p>{selectedOrder.shippingAddress?.street || 'N/A'}</p>
+                    <p>{selectedOrder.shippingAddress?.city || 'N/A'}, {selectedOrder.shippingAddress?.state || 'N/A'} {selectedOrder.shippingAddress?.zipCode || 'N/A'}</p>
+                    <p>{selectedOrder.shippingAddress?.country || 'N/A'}</p>
                   </div>
                   <div className="col-md-6">
                     <h6>Order Information</h6>
                     <p><strong>Order Date:</strong> {formatDate(selectedOrder.createdAt)}</p>
-                    <p><strong>Payment Method:</strong> {selectedOrder.paymentMethod}</p>
-                    <p><strong>Subtotal:</strong> ₹{selectedOrder.subtotal?.toFixed(2)}</p>
-                    <p><strong>Shipping:</strong> ₹{selectedOrder.shippingCost?.toFixed(2)}</p>
-                    <p><strong>Tax:</strong> ₹{selectedOrder.tax?.toFixed(2)}</p>
-                    <p><strong>Total:</strong> ₹{selectedOrder.totalAmount?.toFixed(2)}</p>
+                    <p><strong>Payment Method:</strong> {selectedOrder.paymentMethod || 'N/A'}</p>
+                    <p><strong>Subtotal:</strong> ₹{selectedOrder.subtotal?.toFixed(2) || '0.00'}</p>
+                    <p><strong>Shipping:</strong> ₹{selectedOrder.shippingCost?.toFixed(2) || '0.00'}</p>
+                    <p><strong>Tax:</strong> ₹{selectedOrder.tax?.toFixed(2) || '0.00'}</p>
+                    <p><strong>Total:</strong> ₹{selectedOrder.totalAmount?.toFixed(2) || '0.00'}</p>
                   </div>
                 </div>
 
@@ -446,12 +493,12 @@ const AdminOrders = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedOrder.products?.map((item, index) => (
+                      {Array.isArray(selectedOrder.products) && selectedOrder.products.map((item, index) => (
                         <tr key={index}>
-                          <td>{item.product?.name || 'Product Name Unavailable'}</td>
-                          <td>{item.quantity}</td>
-                          <td>₹{item.price?.toFixed(2)}</td>
-                          <td>₹{(item.price * item.quantity).toFixed(2)}</td>
+                          <td>{item.productId?.title || 'Product Name Unavailable'}</td>
+                          <td>{item.quantity || 0}</td>
+                          <td>₹{item.price?.toFixed(2) || '0.00'}</td>
+                          <td>₹{((item.price || 0) * (item.quantity || 0)).toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -465,7 +512,7 @@ const AdminOrders = () => {
                       <label className="form-label">Order Status</label>
                       <select
                         className="form-select"
-                        value={selectedOrder.orderStatus}
+                        value={selectedOrder.orderStatus || 'Processing'}
                         onChange={(e) => setSelectedOrder(prev => ({ ...prev, orderStatus: e.target.value }))}
                       >
                         <option value="Processing">Processing</option>
@@ -478,7 +525,7 @@ const AdminOrders = () => {
                       <label className="form-label">Payment Status</label>
                       <select
                         className="form-select"
-                        value={selectedOrder.paymentStatus}
+                        value={selectedOrder.paymentStatus || 'Pending'}
                         onChange={(e) => setSelectedOrder(prev => ({ ...prev, paymentStatus: e.target.value }))}
                       >
                         <option value="Pending">Pending</option>

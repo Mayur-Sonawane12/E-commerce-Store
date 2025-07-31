@@ -8,6 +8,7 @@ const ProductCard = ({ product }) => {
 
   const handleAddToCart = () => {
     addToCart(product, 1);
+    alert("Product Added to Cart");
   };
 
 

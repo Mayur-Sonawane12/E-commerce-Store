@@ -14,14 +14,17 @@ import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
 import CartPage from './pages/CartPage';
 import Profile from './pages/Profile';
-import OrderDetails from './pages/OrdersDetails';
+import OrderDetails from './pages/OrderDetails';
+import Orders from './pages/Orders';
 import Checkout from './pages/Checkout';
 
 // Admin Pages
 import AdminPage from './pages/AdminPage';
+import AdminDashboard from './pages/AdminDashboard';
 import AdminProducts from './pages/AdminProducts';
 import AdminOrders from './pages/AdminOrders';
 import AdminUsers from './pages/AdminUsers';
+import AdminAnalytics from './pages/AdminAnalytics';
 
 
 function App() {
@@ -51,9 +54,9 @@ function App() {
                       <Profile />
                     </ProtectedRoute>
                   } />
-                  <Route path="/orders" element={
+                  <Route path="/orders/:orderId" element={
                     <ProtectedRoute>
-                      <OrderDetails/>
+                      <OrderDetails />
                     </ProtectedRoute>
                   } />
                   <Route path="/checkout" element={
@@ -61,9 +64,19 @@ function App() {
                       <Checkout />
                     </ProtectedRoute>
                   } />
+                  <Route path="/orders" element={
+                    <ProtectedRoute>
+                      <Orders />
+                    </ProtectedRoute>
+                  } />
                   
                   {/* Admin Routes */}
                   <Route path="/admin/dashboard" element={
+                    <ProtectedRoute requireAdmin={true}>
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin" element={
                     <ProtectedRoute requireAdmin={true}>
                       <AdminPage />
                     </ProtectedRoute>
@@ -83,16 +96,10 @@ function App() {
                       <AdminUsers />
                     </ProtectedRoute>
                   } />
-                  
-                  {/* Catch-all route for malformed URLs */}
-                  <Route path="*" element={
-                    <div className="container mt-5 text-center">
-                      <h3>Page Not Found</h3>
-                      <p>The page you are looking for does not exist.</p>
-                      <button className="btn btn-primary" onClick={() => window.location.href = '/'}>
-                        Go to Home
-                      </button>
-                    </div>
+                  <Route path="/admin/analytics" element={
+                    <ProtectedRoute requireAdmin={true}>
+                      <AdminAnalytics />
+                    </ProtectedRoute>
                   } />
                 </Routes>
               </main>

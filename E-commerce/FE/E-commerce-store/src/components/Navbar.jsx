@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { FaShoppingCart, FaHeart, FaUser, FaSignOutAlt, FaSearch } from 'react-icons/fa';
@@ -8,7 +8,17 @@ const Navbar = () => {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { getCartCount } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Sync search term with URL params when on products page
+  useEffect(() => {
+    if (location.pathname === '/products') {
+      const urlParams = new URLSearchParams(location.search);
+      const searchParam = urlParams.get('search');
+      setSearchTerm(searchParam || '');
+    }
+  }, [location]);
 
   const handleLogout = () => {
     logout();
@@ -18,9 +28,41 @@ const Navbar = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
+      // Navigate to products page with search parameter
       navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
+    } else if (location.pathname === '/products') {
+      // If on products page and search is empty, clear search param
+      const urlParams = new URLSearchParams(location.search);
+      urlParams.delete('search');
+      const newSearch = urlParams.toString();
+      navigate(`/products${newSearch ? `?${newSearch}` : ''}`);
     }
   };
+
+  const handleSearchInputChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch(e);
+    }
+  };
+
+  // Auto-search when user stops typing (debounced)
+  useEffect(() => {
+    if (location.pathname === '/products' && searchTerm) {
+      const timeoutId = setTimeout(() => {
+        const urlParams = new URLSearchParams(location.search);
+        const currentSearch = urlParams.get('search');
+        if (searchTerm !== currentSearch) {
+          navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
+        }
+      }, 800); // 800ms delay for auto-search
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [searchTerm, location.pathname, navigate]);
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -98,15 +140,33 @@ const Navbar = () => {
                 type="search"
                 placeholder="Search products..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchInputChange}
+                onKeyPress={handleSearchKeyPress}
+                aria-label="Search products"
               />
-              <button className="btn btn-outline-light" type="submit">
+              {/* {searchTerm && (
+                <button
+                  type="button"
+                  className="btn btn-outline-light"
+                  onClick={() => {
+                    setSearchTerm('');
+                    if (location.pathname === '/products') {
+                      const urlParams = new URLSearchParams(location.search);
+                      urlParams.delete('search');
+                      const newSearch = urlParams.toString();
+                      navigate(`/products${newSearch ? `?${newSearch}` : ''}`);
+                    }
+                  }}
+                >
+                </button>
+              )} */}
+              <button className="btn btn-outline-light" type="submit" aria-label="Search">
                 <FaSearch />
               </button>
             </div>
           </form>
 
-          {/* Cart and Wishlist Icons */}
+          {/* Cart Icons */}
           <div className="d-flex align-items-center me-3">
             <Link to="/cart" className="btn btn-outline-light position-relative">
               <FaShoppingCart />
@@ -178,4 +238,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;

@@ -12,7 +12,7 @@ router.post('/placeorder', auth, async (req, res) => {
       products, 
       totalAmount, 
       subtotal,
-      shippingCost,
+      shippingCost, 
       tax,
       shippingAddress, 
       billingAddress,
@@ -178,23 +178,13 @@ router.get('/getallorders', auth, async (req, res) => {
     
     const orders = await Order.find(filter)
       .populate('products.productId')
-      .populate('userId', 'firstName lastName email')
+      .populate('userId', 'name email')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
-    const total = await Order.countDocuments(filter);
-
-    res.json({
-      orders,
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / limit),
-        totalOrders: total,
-        hasNext: page * limit < total,
-        hasPrev: page > 1
-      }
-    });
+    // Return just the orders array for frontend compatibility
+    res.json(orders);
   } catch (err) {
     console.error('Error fetching all orders:', err);
     res.status(500).json({ message: err.message });
@@ -282,6 +272,36 @@ router.put('/cancel/:id', auth, async (req, res) => {
     res.json(order);
   } catch (err) {
     console.error('Error cancelling order:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Delete order (user can delete their own order if it's still processing or cancelled)
+router.delete('/order/:id', auth, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Only allow deletion if user owns the order or is admin
+    if (order.userId.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Only allow deletion if order is still processing or cancelled
+    if (!['Processing', 'Cancelled'].includes(order.orderStatus)) {
+      return res.status(400).json({ 
+        message: 'Order cannot be deleted. Only processing or cancelled orders can be deleted.' 
+      });
+    }
+
+    await order.deleteOne();
+
+    res.json({ message: 'Order deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting order:', err);
     res.status(500).json({ message: err.message });
   }
 });

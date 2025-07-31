@@ -33,6 +33,7 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
+    alert("Product Added To Cart");
   };
 
   const renderStars = (rating) => {

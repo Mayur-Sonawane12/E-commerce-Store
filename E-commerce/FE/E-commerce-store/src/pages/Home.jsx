@@ -16,21 +16,21 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-  const token = localStorage.getItem('token');
-  setIsLoggedIn(!!token);
-}, []);
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
+  }, []);
 
   const fetchFeaturedProducts = async () => {
-  try {
-    const response = await axios.get('http://localhost:5000/api/products/getproducts?featured=true&limit=8');
-    setFeaturedProducts(Array.isArray(response.data.products) ? response.data.products : []);
-  } catch (error) {
-    console.error('Error fetching featured products:', error);
-    setFeaturedProducts([]); // fallback to empty array on error
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      const response = await axios.get('http://localhost:5000/api/products/getall?featured=true&limit=16');
+      setFeaturedProducts(Array.isArray(response.data.products) ? response.data.products : []);
+    } catch (error) {
+      console.error('Error fetching featured products:', error);
+      setFeaturedProducts([]); // fallback to empty array on error
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchCategories = async () => {
     try {

@@ -24,16 +24,24 @@ const AdminProducts = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:5000/api/products/getproducts', {
+      const response = await axios.get('http://localhost:5000/api/products/getall', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
 
-      if (Array.isArray(response.data.products)) {
-        setProducts(response.data.products);
-    } else {
-      console.error('Invalid products data:', response.data);
-      setProducts([]);
-    }
+      // Handle different response structures
+      let productsData = [];
+      if (response.data && Array.isArray(response.data)) {
+        productsData = response.data;
+      } else if (response.data && Array.isArray(response.data.products)) {
+        productsData = response.data.products;
+      } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        productsData = response.data.data;
+      } else {
+        console.error('Invalid products data structure:', response.data);
+        productsData = [];
+      }
+
+      setProducts(productsData);
     } catch (error) {
       console.error('Error fetching products:', error);
       setProducts([]);
@@ -66,13 +74,13 @@ const AdminProducts = () => {
   const handleEdit = (product) => {
     setEditingProduct(product);
     setFormData({
-      title: product.title,
-      description: product.description,
-      price: product.price,
-      category: product.category,
-      image: product.image,
-      stock: product.stock,
-      rating: product.rating
+      title: product.title || '',
+      description: product.description || '',
+      price: product.price || '',
+      category: product.category || '',
+      image: product.image || '',
+      stock: product.stock || '',
+      rating: product.rating || ''
     });
     setShowModal(true);
   };
@@ -125,80 +133,100 @@ const AdminProducts = () => {
   return (
     <div className="container mt-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Manage Products</h2>
+        <h2>Manage Products ({products.length} products)</h2>
         <button className="btn btn-primary" onClick={openAddModal}>
           <FaPlus className="me-2" />
           Add Product
         </button>
       </div>
 
-      <div className="card">
-        <div className="card-body">
-          <div className="table-responsive">
-            <table className="table table-hover">
-              <thead>
-                <tr>
-                  <th>Image</th>
-                  <th>Title</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>Stock</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr key={product._id}>
-                    <td>
-                      <img
-                        src={product.image }
-                        alt={product.title }
-                        className="img-thumbnail"
-                        style={{ width: '50px', height: '50px', objectFit: 'cover' }}
-                      />
-                    </td>
-                    <td>
-                      <strong>{product.title}</strong>
-                      <br />
-                      <small className="text-muted">
-                        {product.description?.substring(0, 50)}...
-                      </small>
-                    </td>
-                    <td>
-                      <span className="badge bg-primary">{product.category}</span>
-                    </td>
-                    <td>${product.price?.toFixed(2)}</td>
-                    <td>
-                      <span className={`badge ${
-                        product.stock === 0 ? 'bg-danger' :
-                        product.stock <= 5 ? 'bg-warning' : 'bg-success'
-                      }`}>
-                        {product.stock}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="btn-group" role="group">
-                        <button
-                          className="btn btn-sm btn-outline-primary"
-                          onClick={() => handleEdit(product)}
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleDelete(product._id)}
-                        >
-                          <FaTrash />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {products.length === 0 ? (
+        <div className="card">
+          <div className="card-body text-center">
+            <h5 className="text-muted">No products found</h5>
+            <p>Start by adding your first product using the "Add Product" button above.</p>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="card">
+          <div className="card-body">
+            <div className="table-responsive">
+              <table className="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Image</th>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map((product) => (
+                    <tr key={product._id}>
+                      <td>
+                        <img
+                          src={product.image || '/placeholder-image.jpg'}
+                          alt={product.title || 'Product'}
+                          className="img-thumbnail"
+                          style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                          onError={(e) => {
+                            e.target.src = '/placeholder-image.jpg';
+                          }}
+                        />
+                      </td>
+                      <td>
+                        <strong>{product.title || 'Untitled'}</strong>
+                        <br />
+                        <small className="text-muted">
+                          {product.description ? 
+                            (product.description.length > 50 ? 
+                              `${product.description.substring(0, 50)}...` : 
+                              product.description
+                            ) : 
+                            'No description'
+                          }
+                        </small>
+                      </td>
+                      <td>
+                        <span className="badge bg-primary">{product.category || 'Uncategorized'}</span>
+                      </td>
+                      <td>₹{product.price ? parseFloat(product.price).toFixed(2) : '0.00'}</td>
+                      <td>
+                        <span className={`badge ${
+                          !product.stock || product.stock === 0 ? 'bg-danger' :
+                          product.stock <= 5 ? 'bg-warning' : 'bg-success'
+                        }`}>
+                          {product.stock || 0}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="btn-group" role="group">
+                          <button
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => handleEdit(product)}
+                            title="Edit Product"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => handleDelete(product._id)}
+                            title="Delete Product"
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add/Edit Product Modal */}
       {showModal && (
@@ -219,7 +247,7 @@ const AdminProducts = () => {
                 <div className="modal-body">
                   <div className="row">
                     <div className="col-md-6 mb-3">
-                      <label className="form-label">Title </label>
+                      <label className="form-label">Title *</label>
                       <input
                         type="text"
                         className="form-control"
@@ -229,7 +257,7 @@ const AdminProducts = () => {
                       />
                     </div>
                     <div className="col-md-6 mb-3">
-                      <label className="form-label">Category</label>
+                      <label className="form-label">Category *</label>
                       <input
                         type="text"
                         className="form-control"
@@ -241,7 +269,7 @@ const AdminProducts = () => {
                   </div>
                   
                   <div className="mb-3">
-                    <label className="form-label">Description</label>
+                    <label className="form-label">Description *</label>
                     <textarea
                       className="form-control"
                       rows="3"
@@ -253,10 +281,11 @@ const AdminProducts = () => {
                   
                   <div className="row">
                     <div className="col-md-4 mb-3">
-                      <label className="form-label">Price</label>
+                      <label className="form-label">Price *</label>
                       <input
                         type="number"
                         step="0.01"
+                        min="0"
                         className="form-control"
                         value={formData.price}
                         onChange={(e) => setFormData({...formData, price: e.target.value})}
@@ -264,27 +293,39 @@ const AdminProducts = () => {
                       />
                     </div>
                     <div className="col-md-4 mb-3">
-                      <label className="form-label">Stock</label>
+                      <label className="form-label">Stock *</label>
                       <input
                         type="number"
+                        min="0"
                         className="form-control"
                         value={formData.stock}
                         onChange={(e) => setFormData({...formData, stock: e.target.value})}
                         required
                       />
                     </div>
-                  </div>
-                  
-                  <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Image URL</label>
+                    <div className="col-md-4 mb-3">
+                      <label className="form-label">Rating</label>
                       <input
-                        type="url"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="5"
                         className="form-control"
-                        value={formData.image}
-                        onChange={(e) => setFormData({...formData, image: e.target.value})}
+                        value={formData.rating}
+                        onChange={(e) => setFormData({...formData, rating: e.target.value})}
                       />
                     </div>
+                  </div>
+                  
+                  <div className="mb-3">
+                    <label className="form-label">Image URL</label>
+                    <input
+                      type="url"
+                      className="form-control"
+                      value={formData.image}
+                      onChange={(e) => setFormData({...formData, image: e.target.value})}
+                      placeholder="https://example.com/image.jpg"
+                    />
                   </div>
                 </div>
                 <div className="modal-footer">

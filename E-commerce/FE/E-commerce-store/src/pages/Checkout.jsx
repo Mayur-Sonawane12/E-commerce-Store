@@ -214,7 +214,12 @@ const Checkout = () => {
           fullName: `${shipping.firstName} ${shipping.lastName}`
         } : {
           ...billing.address,
-          fullName: `${shipping.firstName} ${shipping.lastName}`
+          fullName: `${shipping.firstName} ${shipping.lastName}`,
+          firstName: shipping.firstName,
+          lastName: shipping.lastName,
+          email: shipping.email,
+          phone: shipping.phone,
+          country: shipping.country
         },
         paymentMethod: payment.paymentMethod,
         paymentStatus: 'Pending'
@@ -233,13 +238,8 @@ const Checkout = () => {
       
       // Navigate to order details page with error handling
       setTimeout(() => {
-        if (response.data && response.data._id) {
-          navigate(`http://localhost:5000/api/orders/myorder/${response.data._id}`);
-        } else {
-          navigate('/orders');
-        }
+        navigate(`/orders/${response.data._id}`);
       }, 2000);
-
     } catch (err) {
       setErrors({
         general: err.response?.data?.message || 'Failed to place order. Please try again.'

@@ -21,7 +21,7 @@ const AdminPage = () => {
   const fetchDashboardStats = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/admin/dashboard', {
+      const response = await axios.get('http://localhost:5000/api/admin/dashboard', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setStats(response.data);
@@ -33,9 +33,9 @@ const AdminPage = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'INR'
     }).format(amount);
   };
 
@@ -214,16 +214,22 @@ const AdminPage = () => {
                       {stats.recentOrders?.map((order) => (
                         <tr key={order._id}>
                           <td>#{order._id.slice(-8)}</td>
-                          <td>{order.user?.name || 'N/A'}</td>
+                          <td>
+                            {order.userId?.name || order.shippingAddress?.fullName || 'N/A'}
+                            <br />
+                            <small className="text-muted">
+                              {order.userId?.email || order.shippingAddress?.email || 'N/A'}
+                            </small>
+                          </td>
                           <td>{formatCurrency(order.totalAmount)}</td>
                           <td>
                             <span className={`badge bg-${
-                              order.status === 'delivered' ? 'success' :
-                              order.status === 'shipped' ? 'primary' :
-                              order.status === 'processing' ? 'info' :
-                              order.status === 'cancelled' ? 'danger' : 'warning'
+                              order.orderStatus === 'Delivered' ? 'success' :
+                              order.orderStatus === 'Shipped' ? 'primary' :
+                              order.orderStatus === 'Processing' ? 'info' :
+                              order.orderStatus === 'Cancelled' ? 'danger' : 'warning'
                             }`}>
-                              {order.status}
+                              {order.orderStatus}
                             </span>
                           </td>
                           <td>{formatDate(order.createdAt)}</td>
@@ -254,7 +260,7 @@ const AdminPage = () => {
                   {stats.lowStockProducts?.map((product) => (
                     <div key={product._id} className="list-group-item d-flex justify-content-between align-items-center">
                       <div>
-                        <h6 className="mb-1">{product.name}</h6>
+                        <h6 className="mb-1">{product.title}</h6>
                         <small className="text-muted">Stock: {product.stock}</small>
                       </div>
                       <span className="badge bg-warning text-dark">

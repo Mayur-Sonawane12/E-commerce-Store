@@ -73,7 +73,7 @@ const Cart = () => {
         <p className="text-muted">Add some products to your cart to get started!</p>
         <button 
           className="btn btn-primary mt-3" 
-          onClick={() => navigate('/products')}
+          onClick={() => navigate('/')}
         >
           Continue Shopping
         </button>
@@ -103,7 +103,7 @@ const Cart = () => {
         <p className="text-muted">Add some products to your cart to get started!</p>
         <button 
           className="btn btn-primary mt-3" 
-          onClick={() => navigate('/products')}
+          onClick={() => navigate('/')}
         >
           Continue Shopping
         </button>
